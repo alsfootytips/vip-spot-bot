@@ -57,4 +57,11 @@ while True:
         # Spots just taken
         if current_state == "open" and new_state == "full":
             send_telegram("❌ VIP spots have now been taken.")
-            prin
+            print("VIP spots taken alert sent.")
+
+        current_state = new_state
+
+    except Exception as e:
+        print("Error:", e)
+
+    time.sleep(30)
