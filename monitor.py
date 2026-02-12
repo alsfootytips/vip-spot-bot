@@ -21,6 +21,11 @@ def get_state():
     response = requests.get(URL, timeout=10)
     content = response.text.lower()
 
+    print("---- PAGE CHECK ----")
+    print("Contains 'spots left':", "spots left" in content)
+    print("Contains 'no spots':", "no spots" in content)
+    print("--------------------")
+
     if "spots left" in content:
         return "open"
     else:
