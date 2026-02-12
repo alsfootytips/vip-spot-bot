@@ -1,59 +1,64 @@
-import requests
 import time
+import requests
+from playwright.sync_api import sync_playwright
 
 BOT_TOKEN = "8518789928:AAGEx1Fo7mzm_31EtcGe8yyS1rLrDxA7YoU"
 CHAT_ID = "-1002856575590"
 
 URL = "https://mymembers.io/alsfootytipsvip"
+FULL_TEXT = "There are no spots left for this page"
 
-current_state = None  # will be set after first check
+current_state = None
 
 
 def send_telegram(message):
     requests.get(
         f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
         params={"chat_id": CHAT_ID, "text": message},
-        timeout=10
+        timeout=10,
     )
+
+
+def check_page(browser):
+    page = browser.new_page()
+    page.goto(URL, timeout=30000)
+    page.wait_for_timeout(3000)  # wait for JS to render
+    content = page.content()
+    page.close()
+    return content
 
 
 print("VIP spots monitor running...")
 
-while True:
-    try:
-        response = requests.get(URL, timeout=10)
-        content = response.text.lower()
+with sync_playwright() as p:
+    browser = p.chromium.launch(headless=True)
 
-        # Detect state
-        if "no spots left" in content:
-            new_state = "full"
-        else:
-            new_state = "open"
+    while True:
+        try:
+            content = check_page(browser)
 
-        # Set initial state without sending message
-        if current_state is None:
-            current_state = new_state
-            print("Starting state:", current_state)
+            if FULL_TEXT in content:
+                new_state = "full"
+            else:
+                new_state = "open"
 
-        # VIP spots just opened
-        elif current_state == "full" and new_state == "open":
-            send_telegram(
-                "🚨 VIP SPOTS JUST OPENED!\n\nJoin now:\nhttps://mymembers.io/alsfootytipsvip"
-            )
-            print("VIP spots opened alert sent.")
-            current_state = new_state
+            if current_state is None:
+                current_state = new_state
+                print("Starting state:", current_state)
 
-        # VIP spots just taken
-        elif current_state == "open" and new_state == "full":
-            send_telegram("❌ VIP spots have now been taken.")
-            print("VIP spots taken alert sent.")
+            elif current_state == "full" and new_state == "open":
+                send_telegram(
+                    "🚨 VIP SPOTS JUST OPENED!\n\nJoin now:\nhttps://mymembers.io/alsfootytipsvip"
+                )
+                print("VIP spots opened alert sent.")
+
+            elif current_state == "open" and new_state == "full":
+                send_telegram("❌ VIP spots have now been taken.")
+                print("VIP spots taken alert sent.")
+
             current_state = new_state
 
-        else:
-            current_state = new_state
-            print("No change. Current state:", current_state)
+        except Exception as e:
+            print("Error:", e)
 
-    except Exception as e:
-        print("Error:", e)
-
-    time.sleep(30)
+        time.sleep(30)
