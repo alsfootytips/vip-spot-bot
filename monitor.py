@@ -1,12 +1,12 @@
 import requests
 import time
-import os
 
 BOT_TOKEN = "8518789928:AAGEx1Fo7mzm_31EtcGe8yyS1rLrDxA7YoU"
 CHAT_ID = "-1002856575590"
 
 URL = "https://mymembers.io/alsfootytipsvip"
-FULL_TEXT = "There are no spots left for this page"
+
+current_state = None  # unknown at start
 
 
 def send_telegram(message):
@@ -19,35 +19,35 @@ def send_telegram(message):
 
 def get_state():
     response = requests.get(URL, timeout=10)
-    content = response.text
-    if FULL_TEXT in content:
+    content = response.text.lower()
+
+    if "spots left" in content:
+        return "open"
+    else:
         return "full"
-    return "open"
 
 
 print("VIP spots monitor running...")
 
-# Detect actual starting state
 current_state = get_state()
 print(f"Starting state: {current_state}")
 
 while True:
     try:
         new_state = get_state()
+        print(f"Current: {current_state} | New: {new_state}")
 
-        # VIP spots just opened
+        # Spots just opened
         if current_state == "full" and new_state == "open":
             send_telegram(
                 "🚨 VIP SPOTS JUST OPENED!\n\nJoin now:\nhttps://mymembers.io/alsfootytipsvip"
             )
-            print("VIP spots opened alert sent.")
+            print("OPEN alert sent")
 
-        # VIP spots just taken
+        # Spots just taken
         if current_state == "open" and new_state == "full":
-            send_telegram(
-                "❌ VIP spots have now been taken."
-            )
-            print("VIP spots taken alert sent.")
+            send_telegram("❌ VIP spots have now been taken.")
+            print("FULL alert sent")
 
         current_state = new_state
 
