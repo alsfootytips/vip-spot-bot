@@ -2,8 +2,8 @@ import requests
 import time
 import os
 
-BOT_TOKEN = 8518789928:AAGEx1Fo7mzm_31EtcGe8yyS1rLrDxA7YoU
-CHAT_ID = -1002856575590
+BOT_TOKEN = "8518789928:AAGEx1Fo7mzm_31EtcGe8yyS1rLrDxA7YoU"
+CHAT_ID = "-1002856575590"
 
 URL = "https://mymembers.io/alsfootytipsvip"
 KEYWORD = "SPOTS LEFT"
