@@ -6,7 +6,8 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 
 URL = "https://mymembers.io/alsfootytipsvip"
-KEYWORD = "There are no spots left for this page"
+KEYWORD = "test123"
+
 
 last_state = True
 
