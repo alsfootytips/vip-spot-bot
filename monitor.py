@@ -2,38 +2,34 @@ import requests
 import time
 import os
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-CHAT_ID = os.getenv("CHAT_ID")
+BOT_TOKEN = 8518789928:AAGEx1Fo7mzm_31EtcGe8yyS1rLrDxA7YoU
+CHAT_ID = -1002856575590
 
 URL = "https://mymembers.io/alsfootytipsvip"
-KEYWORD = "test123"
+KEYWORD = "SPOTS LEFT"
 
+def send_telegram(message):
+    requests.get(
+        f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+        params={"chat_id": CHAT_ID, "text": message}
+    )
 
-last_state = True
-
-def send_telegram(msg):
-    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-    data = {"chat_id": CHAT_ID, "text": msg}
-    requests.post(url, data=data)
+print("Bot started...")
 
 while True:
     try:
-        r = requests.get(URL, timeout=10)
-        text = r.text.lower()
+        response = requests.get(URL, timeout=10)
+        content = response.text
 
-        if KEYWORD.lower() in text:
-            current_state = True
+        if KEYWORD in content:
+            send_telegram("🚨 VIP spot just opened! Join now:")
+            send_telegram(URL)
+            print("Alert sent!")
+            time.sleep(300)  # wait 5 mins after alert
         else:
-            current_state = False
-
-        if last_state and not current_state:
-            send_telegram(
-                "🚨 VIP SPOT JUST OPENED!\n\nJoin now before it fills:\nhttps://mymembers.io/alsfootytipsvip"
-            )
-
-        last_state = current_state
+            print("No spots yet.")
 
     except Exception as e:
         print("Error:", e)
 
-    time.sleep(60)
+    time.sleep(30)  # check every 30 seconds
