@@ -2,63 +2,104 @@ import time
 import requests
 from playwright.sync_api import sync_playwright
 
+# =========================
+# CONFIG
+# =========================
+URL = "https://mymembers.io/alsfootytipsvip"
+
 BOT_TOKEN = "8518789928:AAGEx1Fo7mzm_31EtcGe8yyS1rLrDxA7YoU"
 CHAT_ID = "-1002856575590"
 
-URL = "https://mymembers.io/alsfootytipsvip"
-FULL_TEXT = "There are no spots left for this page"
-
-current_state = None
+CHECK_INTERVAL = 25  # seconds between checks
+REQUIRED_OPEN_CHECKS = 2  # how many consecutive "open" checks needed
 
 
+# =========================
+# TELEGRAM FUNCTION
+# =========================
 def send_telegram(message):
-    requests.get(
-        f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-        params={"chat_id": CHAT_ID, "text": message},
-        timeout=10,
-    )
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+    data = {
+        "chat_id": CHAT_ID,
+        "text": message,
+        "disable_web_page_preview": False,
+    }
+    try:
+        requests.post(url, data=data, timeout=10)
+    except Exception as e:
+        print("Telegram error:", e)
 
 
-def check_page(browser):
-    page = browser.new_page()
-    page.goto(URL, timeout=30000)
-    page.wait_for_timeout(3000)  # wait for JS to render
-    content = page.content()
-    page.close()
-    return content
+# =========================
+# PAGE CHECK FUNCTION
+# =========================
+def check_page_state(page):
+    page.goto(URL, timeout=60000)
+    page.wait_for_timeout(4000)  # wait for JS to render
+
+    content = page.content().lower()
+
+    if "no spots left" in content:
+        return "full"
+
+    if "spots left" in content or "buy now" in content:
+        return "open"
+
+    # fallback
+    return "unknown"
 
 
-print("VIP spots monitor running...")
+# =========================
+# MAIN LOOP
+# =========================
+def main():
+    print("VIP spots monitor running...")
 
-with sync_playwright() as p:
-    browser = p.chromium.launch(headless=True)
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
 
-    while True:
-        try:
-            content = check_page(browser)
+        current_state = check_page_state(page)
+        print("Starting state:", current_state)
 
-            if FULL_TEXT in content:
-                new_state = "full"
-            else:
-                new_state = "open"
+        open_counter = 0
 
-            if current_state is None:
-                current_state = new_state
-                print("Starting state:", current_state)
+        while True:
+            try:
+                new_state = check_page_state(page)
+                print(f"Current: {current_state} | New: {new_state}")
 
-            elif current_state == "full" and new_state == "open":
-                send_telegram(
-                    "🚨 VIP SPOTS JUST OPENED!\n\nJoin now:\nhttps://mymembers.io/alsfootytipsvip"
-                )
-                print("VIP spots opened alert sent.")
+                # ======================
+                # OPEN DETECTION
+                # ======================
+                if new_state == "open":
+                    open_counter += 1
+                else:
+                    open_counter = 0
 
-            elif current_state == "open" and new_state == "full":
-                send_telegram("❌ VIP spots have now been taken.")
-                print("VIP spots taken alert sent.")
+                if (
+                    open_counter >= REQUIRED_OPEN_CHECKS
+                    and current_state == "full"
+                ):
+                    send_telegram(
+                        "🚨 VIP SPOTS JUST OPENED!\n\nJoin now:\nhttps://mymembers.io/alsfootytipsvip"
+                    )
+                    current_state = "open"
+                    open_counter = 0
 
-            current_state = new_state
+                # ======================
+                # FULL DETECTION
+                # ======================
+                if new_state == "full" and current_state == "open":
+                    send_telegram("❌ VIP spots have now been taken.")
+                    current_state = "full"
+                    open_counter = 0
 
-        except Exception as e:
-            print("Error:", e)
+            except Exception as e:
+                print("Error:", e)
 
-        time.sleep(30)
+            time.sleep(CHECK_INTERVAL)
+
+
+if __name__ == "__main__":
+    main()
